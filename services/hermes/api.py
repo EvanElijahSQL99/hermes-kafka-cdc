@@ -111,7 +111,7 @@ def consume_loop():
                   "topic.metadata.refresh.interval.ms": 10000, "fetch.wait.max.ms": 50})
     c.subscribe([config.METRICS_TOPIC, config.ALERTS_TOPIC, config.TRACE_TOPIC, "^shop\\.public\\..*"])
     while True:
-        for m in c.consume(num_messages=200, timeout=0.5):
+        for m in c.consume(num_messages=200, timeout=0.05):
             if m.error():
                 continue
             v = loads(m.value())

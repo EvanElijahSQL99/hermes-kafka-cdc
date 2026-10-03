@@ -7,6 +7,8 @@ drain.
 
 **Live demo:** https://d1ykr2itxottxz.cloudfront.net
 
+![Hermes dashboard: live pipeline, order trace and database health](docs/dashboard.png)
+
 
 ## What it shows
 

@@ -85,7 +85,7 @@ def run():
                 log.info("CDC consumption %s", "paused" if want_pause else "resumed")
             paused_now = proc.paused = want_pause
 
-        for m in consumer.consume(num_messages=500, timeout=0.2):
+        for m in consumer.consume(num_messages=500, timeout=0.05):
             if m.error():
                 if m.error().code() != KafkaError._PARTITION_EOF:
                     log.warning("consumer error: %s", m.error())
