@@ -31,7 +31,7 @@ function apply(prev, p, full) {
   next.alerts = full ? newAlerts.slice(0, 30) : [...newAlerts, ...prev.alerts].slice(0, 30);
   if (p.traces?.length) {
     next.traces = { ...prev.traces };
-    for (const t of p.traces) next.traces[t.trace_id] = { ...t, browser_ts: Date.now() + next.serverSkew };
+    for (const t of p.traces) next.traces[t.trace_id] = { ...t, browser_ts: Date.now() };   // browser clock, like the click time
   }
   if (full && p.history) {
     next.history = p.history;

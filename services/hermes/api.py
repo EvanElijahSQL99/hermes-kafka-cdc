@@ -108,7 +108,7 @@ def compact_cdc(topic, m, value):
 def consume_loop():
     c = Consumer({"bootstrap.servers": config.BOOTSTRAP, "group.id": f"hermes-api-{uuid.uuid4().hex[:8]}",
                   "auto.offset.reset": "latest", "enable.auto.commit": False,
-                  "topic.metadata.refresh.interval.ms": 10000})
+                  "topic.metadata.refresh.interval.ms": 10000, "fetch.wait.max.ms": 50})
     c.subscribe([config.METRICS_TOPIC, config.ALERTS_TOPIC, config.TRACE_TOPIC, "^shop\\.public\\..*"])
     while True:
         for m in c.consume(num_messages=200, timeout=0.5):

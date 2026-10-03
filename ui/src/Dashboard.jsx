@@ -133,7 +133,7 @@ function Trace({ mine, trace, now }) {
     step("Picked up by the dashboard API", trace?.api_ts),
   ];
   const max = Math.max(1, ...steps.map((x) => x.t ?? 0));
-  const shown = trace ? trace.browser_ts - mine.c0 : null;   // approximate; mixes browser and server clocks
+  const shown = trace ? trace.browser_ts - mine.c0 : null;   // both on the browser's clock
   const waiting = !trace && now - mine.c1 > 8000;
   return (
     <div className="trace" aria-live="polite">

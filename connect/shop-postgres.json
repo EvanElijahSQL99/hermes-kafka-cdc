@@ -13,6 +13,7 @@
   "publication.autocreate.mode": "filtered",
   "table.include.list": "public.orders,public.payments,public.inventory",
   "snapshot.mode": "initial",
+  "poll.interval.ms": "50",
   "decimal.handling.mode": "double",
   "tombstones.on.delete": "false",
   "heartbeat.interval.ms": "10000",

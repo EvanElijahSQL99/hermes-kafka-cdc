@@ -9,6 +9,8 @@ export const TABLES = [
 const COLOR = Object.fromEntries(TABLES.map((t) => [t.key, t.color]));
 const HOP = 380;          // ms per wire
 const MAX_PER_BATCH = 24; // keep the animation legible when traffic spikes
+// Offsets are committed once a second, so a handful of events is always "in flight"; only call out real lag.
+const LAG_NOTICE = 25;
 
 function launch(wire, color, visitor, delay) {
   if (!wire) return;
@@ -82,7 +84,7 @@ export default function Pipeline({ s }) {
           ))}
         </div>
         <div className="legend-note">
-          {s.lag.total ? <>Consumer lag: <b className="num">{fmtNum(s.lag.total)}</b> events waiting</> : "Consumer lag: none, the processor is keeping up"}
+          {s.lag.total >= LAG_NOTICE ? <>Consumer lag: <b className="num">{fmtNum(s.lag.total)}</b> events waiting</> : "Consumer lag: none, the processor is keeping up"}
         </div>
       </div>
       <div className="wire" ref={(el) => (wires.current[2] = el)}><span className="lbl">consumer group</span></div>
@@ -110,7 +112,7 @@ function Row({ t, parts, maxLag, cells }) {
       <span className="tname" role="rowheader" style={{ "--c": t.color }}><i />{t.label}</span>
       {[0, 1, 2].map((p) => {
         const info = parts[`${t.key}-${p}`];
-        const lag = info?.lag || 0;
+        const lag = (info?.lag || 0) >= LAG_NOTICE / 3 ? info.lag : 0;
         return (
           <span key={p} role="cell" ref={(el) => (cells.current[`${t.key}-${p}`] = el)}
                 className={`cell${lag ? " lagging" : ""}`}

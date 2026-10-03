@@ -66,7 +66,8 @@ echo '/swapfile none swap sw 0 0' >> /etc/fstab
 dnf install -y docker git
 mkdir -p /usr/local/lib/docker/cli-plugins
 curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
-BX=\$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
+# (parse the whole response: an early-exiting reader like grep -m1 makes curl fail under pipefail)
+BX=\$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')
 curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-buildx "https://github.com/docker/buildx/releases/download/\$BX/buildx-\$BX.linux-amd64"
 chmod +x /usr/local/lib/docker/cli-plugins/*
 systemctl enable --now docker

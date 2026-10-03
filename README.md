@@ -5,7 +5,7 @@ and turns the stream into latency metrics and alerts. Visitors can poke the syst
 by hop, start a blocking chain on a hot row, hold a long transaction, or pause the consumer and watch lag build and
 drain.
 
-**Live demo:** _link added after deployment_
+**Live demo:** https://d1ykr2itxottxz.cloudfront.net
 
 
 ## What it shows

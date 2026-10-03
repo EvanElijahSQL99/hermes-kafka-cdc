@@ -65,6 +65,7 @@ def run():
         "enable.auto.commit": True,
         "auto.commit.interval.ms": 1000,
         "topic.metadata.refresh.interval.ms": 10000,   # pick up Debezium's topics soon after they appear
+        "fetch.wait.max.ms": 50,                       # low-latency fetches (default 500 ms) at demo volumes
     })
     # Regex subscription: Debezium creates shop.public.* topics on its first event.
     consumer.subscribe(["^shop\\.public\\..*", config.TELEMETRY_TOPIC])
