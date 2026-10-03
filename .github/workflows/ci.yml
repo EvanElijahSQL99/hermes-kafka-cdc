@@ -1,0 +1,37 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  services:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Start PostgreSQL with logical decoding
+        run: |
+          docker run -d --name pg -p 55432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust postgres:17 -c wal_level=logical
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 1; done
+      - run: pip install -r services/requirements.txt pytest httpx
+      - name: Tests
+        working-directory: services
+        env:
+          TEST_PG_ADMIN_DSN: host=127.0.0.1 port=55432 user=postgres dbname=postgres
+        run: python -m pytest -q tests
+
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm ci && npm run build
+        working-directory: ui
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet && docker compose build

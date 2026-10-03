@@ -1,0 +1,23 @@
+{
+  "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+  "tasks.max": "1",
+  "database.hostname": "postgres",
+  "database.port": "5432",
+  "database.user": "hermes",
+  "database.password": "hermes",
+  "database.dbname": "shop",
+  "topic.prefix": "shop",
+  "plugin.name": "pgoutput",
+  "slot.name": "hermes_slot",
+  "publication.name": "hermes_pub",
+  "publication.autocreate.mode": "filtered",
+  "table.include.list": "public.orders,public.payments,public.inventory",
+  "snapshot.mode": "initial",
+  "decimal.handling.mode": "double",
+  "tombstones.on.delete": "false",
+  "heartbeat.interval.ms": "10000",
+  "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "key.converter.schemas.enable": "false",
+  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "value.converter.schemas.enable": "false"
+}

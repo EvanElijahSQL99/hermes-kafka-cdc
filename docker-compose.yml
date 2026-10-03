@@ -1,0 +1,128 @@
+# Hermes — real-time database telemetry on Kafka.
+#   docker compose up -d --build      then open http://localhost:8080
+# Single-node KRaft Kafka, Debezium (Kafka Connect), PostgreSQL with logical decoding,
+# and four small Python services. Sized to fit on one 4 GB host.
+
+x-svc: &svc
+  build: { context: ., dockerfile: services/Dockerfile }
+  restart: unless-stopped
+  environment: &env
+    KAFKA_BOOTSTRAP: kafka:9092
+    PG_DSN: host=postgres dbname=shop user=hermes password=hermes
+  depends_on:
+    kafka: { condition: service_healthy }
+    postgres: { condition: service_healthy }
+  logging: &logs
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  kafka:
+    image: quay.io/debezium/kafka:3.7
+    restart: unless-stopped
+    environment:
+      CLUSTER_ID: pa9lDX_nTYOrLq5DFKm-Sg
+      NODE_ID: "1"
+      NODE_ROLE: combined
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_NUM_PARTITIONS: "3"               # CDC topics get 3 partitions → per-partition lag on the dashboard
+      KAFKA_LOG_RETENTION_HOURS: "6"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      HEAP_OPTS: -Xms384m -Xmx512m
+    volumes: [kafka-data:/kafka/data]
+    healthcheck:
+      test: ["CMD-SHELL", "/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+    logging: *logs
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes
+      POSTGRES_DB: shop
+    command:
+      - postgres
+      - -c
+      - wal_level=logical                       # required for Debezium's pgoutput decoding
+      - -c
+      - max_replication_slots=4
+      - -c
+      - max_wal_senders=4
+      - -c
+      - idle_in_transaction_session_timeout=120s  # safety net for the demo scenarios
+      - -c
+      - autovacuum_naptime=10s                  # so visitors see vacuum catch up after a long transaction ends
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hermes -d shop"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    logging: *logs
+
+  connect:
+    image: quay.io/debezium/connect:3.7
+    restart: unless-stopped
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: hermes-connect
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      STATUS_STORAGE_TOPIC: connect_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      HEAP_OPTS: -Xms256m -Xmx512m
+    depends_on:
+      kafka: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/ >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    logging: *logs
+
+  # One-shot: registers (or updates) the Debezium Postgres connector, then exits.
+  connect-init:
+    image: curlimages/curl:8.11.1
+    restart: on-failure
+    depends_on:
+      connect: { condition: service_healthy }
+    volumes: [./connect:/connect:ro]
+    entrypoint: ["sh", "/connect/register.sh"]
+    logging: *logs
+
+  workload:
+    <<: *svc
+    command: ["python", "-m", "hermes.workload"]
+    environment: { <<: *env, WORKLOAD_TPS: "4" }
+
+  collector:
+    <<: *svc
+    command: ["python", "-m", "hermes.collector"]
+
+  processor:
+    <<: *svc
+    command: ["python", "-m", "hermes.processor"]
+
+  api:
+    <<: *svc
+    command: ["uvicorn", "hermes.api:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers",
+              "--forwarded-allow-ips", "*", "--timeout-keep-alive", "75"]
+    ports: ["${HERMES_PORT:-8080}:8080"]
+
+volumes:
+  kafka-data:
+  pg-data:
