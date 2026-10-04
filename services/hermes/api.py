@@ -21,6 +21,7 @@ import psycopg
 from confluent_kafka import Consumer, TopicPartition
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from . import config
@@ -171,6 +172,8 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="Hermes API", docs_url=None, redoc_url=None, lifespan=lifespan)
+# Read-only metrics can be embedded by other sites (e.g. a portfolio page); actions stay same-origin.
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=[])
 
 
 @app.get("/api/health")
